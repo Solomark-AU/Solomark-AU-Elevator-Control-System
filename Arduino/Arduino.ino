@@ -1,26 +1,3 @@
-#ifndef SOLOMARK_AU_HARDWARE
-#define SOLOMARK_AU_HARDWARE
-
-// #include <vector>
-
-enum status
-{
-    DOWNSIDE = -1,
-    STATIC = 0,
-    UPSIDE = 1
-};
-
-struct engine
-{
-    int ID;
-    status STATUS = STATIC;
-
-    engine(int id) {
-        this->ID = id;
-    }
-};
-
-
 class numberDisplayerElement
 {
 public:
@@ -41,6 +18,8 @@ public:
         this->pinLight[10] = pin10;
         this->pinLight[11] = pin11;
         this->pinLight[12] = pin12;
+
+        this->reset_pin();
     }
 
     ~numberDisplayerElement() {}
@@ -67,7 +46,42 @@ public:
         this->numberLights[8] = light8;
     }
 
-    void display_number(int position, int number = 0);
+    void display_number(int position, int number, int keepTime)
+    {
+        for (int i = 1; i <= 8; i++)
+            digitalWrite(this->pinLight[this->numberLights[i]], this->datas[number].lights[i] ? LOW : HIGH);
+        digitalWrite(this->pinLight[this->controlNumber[position]], HIGH);
+        delay(keepTime);
+        this->reset_pin();
+    }
+
+    void display_point(int position, int keepTime)
+    {
+        for (int i = 1; i < 8; i++)
+            (this->pinLight[this->numberLights[i]], HIGH);
+        digitalWrite(this->pinLight[this->numberLights[8]], LOW);
+        digitalWrite(this->pinLight[this->controlNumber[position]], HIGH);
+        delay(keepTime);
+        this->reset_pin();
+    }
+
+    void reset_pin()
+    {
+        for (int i = 1; i <= 4; i++)
+            digitalWrite(this->pinLight[this->controlNumber[i]], LOW);
+        for (int i = 1; i <= 8; i++)
+            digitalWrite(this->pinLight[this->numberLights[i]], HIGH);
+    }
+
+    void update(int elevator1, int elevator2, int keepTime = 1)
+    {
+        this->display_point(2, keepTime);
+        this->display_point(3, keepTime);
+        this->display_number(1, elevator1 / 10, keepTime);
+        this->display_number(2, elevator1 % 10, keepTime);
+        this->display_number(3, elevator2 / 10, keepTime);
+        this->display_number(4, elevator2 % 10, keepTime);
+    };
 
 private:
     struct numberData
@@ -87,6 +101,7 @@ private:
             this->lights[5] = light5;
             this->lights[6] = light6;
             this->lights[7] = light7;
+            this->lights[8] = false;
         }
     };
 
@@ -95,7 +110,6 @@ private:
     int numberLights[9] = {0, 9, 7, 6, 3, 4, 12, 10, 8};
 
     numberData datas[10] = {
-        // turn on 0 1 2 3 4 5 6 7 8 9
         numberData(1, 1, 1, 1, 1, 1, 0),
         numberData(0, 0, 1, 1, 0, 0, 0),
         numberData(0, 1, 1, 0, 1, 1, 1),
@@ -109,6 +123,26 @@ private:
     };
 };
 
-// std::vector<engine> engines;
+numberDisplayerElement numberDisplayer(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
 
-#endif
+void setup()
+{
+    Serial.begin(9600);
+    pinMode(2, OUTPUT);
+    pinMode(3, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
+    pinMode(7, OUTPUT);
+    pinMode(8, OUTPUT);
+    pinMode(9, OUTPUT);
+    pinMode(10, OUTPUT);
+    pinMode(11, OUTPUT);
+    pinMode(12, OUTPUT);
+    pinMode(13, OUTPUT);
+}
+
+void loop()
+{
+    numberDisplayer.update(88, 88);
+}

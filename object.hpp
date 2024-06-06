@@ -7,29 +7,6 @@
 
 int ELEVATOR_NUMBER = 0;
 
-namespace IO
-{
-    int input()
-    {
-        int n;
-        std::cin >> n;
-        return n;
-    }
-
-    void print(int n, bool ent = 0)
-    {
-        std::cout << n;
-        if (ent)
-            std::cout << std::endl;
-    }
-    void print(std::string s, bool ent = 0)
-    {
-        std::cout << s;
-        if (ent)
-            std::cout << std::endl;
-    }
-};
-
 class elevator
 {
 public:
@@ -42,14 +19,14 @@ public:
 
     ~elevator() {}
 
-    void move() {}
+    void move(int target) {}
 
     int get_floor() { return this->floor; }
 
     status get_status() { return this->STATUS; }
 
 private:
-    int ID, floor, station;
+    int ID, floor, station;  //station 常驻楼层
     status STATUS = STATIC;
 };
 
