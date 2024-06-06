@@ -1,3 +1,147 @@
+const int MAXSERVERNUMBER = 64;
+const int MAXCONTAINERNUMBER = 1025;
+int ELEVATOR_NUMBER = 0;
+
+// status 电梯状态
+// DOWNSIDE下行 STATIC不动 UPSIDE上行
+enum status
+{
+    DOWNSIDE = -1,
+    STATIC = 0,
+    UPSIDE = 1
+};
+
+// engine 电机部分
+// 包含电机ID及状态
+struct engine
+{
+    int ID;
+    status STATUS = STATIC;
+    // 为解决bug设置
+};
+
+template <typename T_>
+void swap(T_ *src, T_ *val) {
+    T_ *temp;
+    temp = src;
+    val = src;
+    src = temp;
+}
+
+template <typename T>
+class Container
+{
+public:
+    int length = 0;
+    T datas[MAXCONTAINERNUMBER];
+
+    Container() { }
+
+    ~Container() { }
+
+    int size() { return length; }
+
+    void push_back(T value) { datas[length++] = value; }
+
+    void insert(int index, T value)
+    {
+        length++;
+        for (int i = index; i < length; i++)
+            datas[i] = datas[i + 1];
+        datas[index] = value;
+    }
+
+    int partition(int low, int high)
+    {
+        T pivotKey = datas[low];
+        while (low < high)
+        {
+            while ((low < high) && (pivotKey <= datas[high]))
+                --high;
+            swap(datas[low], datas[high]);
+            while ((low < high) && (datas[low] <= pivotKey))
+                ++low;
+            swap(datas[low], datas[high]);
+        }
+        datas[low] = pivotKey;
+        return low;
+    }
+
+    void sort(int low, int high)
+    {
+        if (low < high)
+        {
+            int pivot = partition(datas, low, high);
+            quickSort(low, pivot - 1);
+            quickSort(pivot + 1, high);
+        }
+    }
+
+    T erase(int index)
+    {
+        T result = datas[index];
+        for (int i = index; i < length; i++)
+            datas[i] = datas[i + 1];
+        length--;
+        return result;
+    }
+
+    T front() { return datas[0]; }
+
+    T back() { return datas[length]; }
+};
+
+Container<engine> engines;
+
+// 电梯类
+class elevator
+{
+public:
+    elevator()
+    {
+        this->ID = ++ELEVATOR_NUMBER;
+        engine temp;
+        temp.ID = this->ID;
+        engines.push_back(temp);
+    }
+
+    ~elevator() {}
+
+    void move(int target) {}
+
+    int get_floor() { return this->floor; }
+
+    status get_status() { return this->STATUS; }
+
+private:
+    int ID, floor, station; // station 常驻楼层
+    status STATUS = STATIC;
+};
+
+// elevatorWell 电梯井部分
+class elevatorWell
+{
+public:
+    elevatorWell()
+    {
+        register_elevator();
+    }
+    ~elevatorWell() {}
+
+    int get_elevatorNumbers() { return WellNumber; };
+
+    void register_elevator()
+    {
+        WellNumber++;
+        this->group.push_back(elevator());
+    };
+
+private:
+    int WellNumber = 1;
+    Container<elevator> group;
+};
+
+// 楼层显示部分
 class numberDisplayerElement
 {
 public:
