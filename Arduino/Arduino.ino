@@ -1,5 +1,5 @@
-const int MAXSERVERNUMBER = 64;
-const int MAXCONTAINERNUMBER = 1025;
+const int MAXSERVERNUMBER = 8;
+const int MAXCONTAINERNUMBER = 16;
 int ELEVATOR_NUMBER = 0;
 
 // status 电梯状态
@@ -72,8 +72,8 @@ public:
         if (low < high)
         {
             int pivot = partition(datas, low, high);
-            quickSort(low, pivot - 1);
-            quickSort(pivot + 1, high);
+            sort(low, pivot - 1);
+            sort(pivot + 1, high);
         }
     }
 

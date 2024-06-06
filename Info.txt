@@ -1,0 +1,1 @@
+1.Arduino.ino 的MAXSERVERNUMBER，MAXCONTAINERNUMBER是应当在有条件的情况下改大的
