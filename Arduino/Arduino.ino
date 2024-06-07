@@ -1,3 +1,6 @@
+#include <Key.h>
+#include <Keypad.h>
+
 const int MAXSERVERNUMBER = 8;
 const int MAXCONTAINERNUMBER = 16;
 int ELEVATOR_NUMBER = 0;
@@ -21,7 +24,8 @@ struct engine
 };
 
 template <typename T_>
-void swap(T_ *src, T_ *val) {
+void swap(T_ *src, T_ *val)
+{
     T_ *temp;
     temp = src;
     val = src;
@@ -35,9 +39,9 @@ public:
     int length = 0;
     T datas[MAXCONTAINERNUMBER];
 
-    Container() { }
+    Container() {}
 
-    ~Container() { }
+    ~Container() {}
 
     int size() { return length; }
 
@@ -142,10 +146,10 @@ private:
 };
 
 // 楼层显示部分
-class numberDisplayerElement
+class displayerElement
 {
 public:
-    numberDisplayerElement(
+    displayerElement(
         int pin1, int pin2, int pin3, int pin4, int pin5, int pin6,
         int pin7, int pin8, int pin9, int pin10, int pin11, int pin12)
     {
@@ -165,8 +169,6 @@ public:
 
         this->reset_pin();
     }
-
-    ~numberDisplayerElement() {}
 
     void set_numberControlPins(int number1, int number2, int number3, int number4)
     {
@@ -207,6 +209,21 @@ public:
         digitalWrite(this->pinLight[this->controlNumber[position]], HIGH);
         delay(keepTime);
         this->reset_pin();
+    }
+
+    void display_status(status elevator1, status elevator2, int keepTime = 1)
+    {
+        int index[4] = {0, 0, 0, 0};
+        if (elevator1 == UPSIDE)
+        {
+            index[0] = 13;
+            index[1] = 14;
+        }
+        else if (elevator1 == STATIC)
+        {
+            index[0] = 11;
+            index[1] = 12;
+        }
     }
 
     void reset_pin()
@@ -253,27 +270,101 @@ private:
     int controlNumber[5] = {0, 11, 1, 2, 5};
     int numberLights[9] = {0, 9, 7, 6, 3, 4, 12, 10, 8};
 
-    numberData datas[10] = {
-        numberData(1, 1, 1, 1, 1, 1, 0),
-        numberData(0, 0, 1, 1, 0, 0, 0),
-        numberData(0, 1, 1, 0, 1, 1, 1),
-        numberData(0, 1, 1, 1, 1, 0, 1),
-        numberData(1, 0, 1, 1, 0, 0, 1),
-        numberData(1, 1, 0, 1, 1, 0, 1),
-        numberData(1, 1, 0, 1, 1, 1, 1),
-        numberData(0, 1, 1, 1, 0, 0, 0),
-        numberData(1, 1, 1, 1, 1, 1, 1),
-        numberData(1, 1, 1, 1, 1, 0, 1),
+    numberData datas[15] = {
+        numberData(1, 1, 1, 1, 1, 1, 0), // number & character: 0 || O
+        numberData(0, 0, 1, 1, 0, 0, 0), // number: 1
+        numberData(0, 1, 1, 0, 1, 1, 1), // number: 2
+        numberData(0, 1, 1, 1, 1, 0, 1), // number: 3
+        numberData(1, 0, 1, 1, 0, 0, 1), // number: 4
+        numberData(1, 1, 0, 1, 1, 0, 1), // number: 5
+        numberData(1, 1, 0, 1, 1, 1, 1), // number: 6
+        numberData(0, 1, 1, 1, 0, 0, 0), // number: 7
+        numberData(1, 1, 1, 1, 1, 1, 1), // number: 8
+        numberData(1, 1, 1, 1, 1, 0, 1), // number: 9
+        numberData(1, 0, 0, 1, 1, 1, 0), // character: L
+        numberData(1, 1, 0, 1, 1, 0, 1), // character: S
+        numberData(1, 1, 1, 1, 0, 1, 1), // character: A
+        numberData(1, 0, 1, 1, 1, 1, 0), // character: U
+        numberData(1, 1, 1, 0, 0, 1, 1), // character: P
     };
 };
 
-numberDisplayerElement numberDisplayer(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+class keypadInputElement
+{
+public:
+    keypadInputElement() {}
+
+    ~keypadInputElement() {}
+
+    char get_keypressChar() { return element.getKey(); }
+
+    void set_pinCol(byte col1, byte col2, byte col3, byte col4)
+    {
+        this->pinCol[0] = col1;
+        this->pinCol[1] = col2;
+        this->pinCol[2] = col3;
+        this->pinCol[3] = col4;
+    }
+
+    void set_pinRow(byte row1, byte row2, byte row3, byte row4)
+    {
+        this->pinRow[0] = row1;
+        this->pinRow[1] = row2;
+        this->pinRow[2] = row3;
+        this->pinRow[3] = row4;
+    }
+
+private:
+    byte pinCol[4] = {A4, A5, 2, 3};   // 按鍵模組，行1~4接腳。
+    byte pinRow[4] = {A0, A1, A2, A3}; // 按鍵模組，列1~4接腳。
+    // 依照行、列排列的按鍵字元（二維陣列）
+    char keymap[4][4] = {
+        {'1', '2', '3', 'A'},
+        {'4', '5', '6', 'B'},
+        {'7', '8', '9', 'C'},
+        {'*', '0', '#', 'D'}};
+    // 初始化語法：Keypad(makeKeymap(按鍵字元的二維陣列), 模組列接腳, 模組行接腳, 模組列數, 模組行數)
+    Keypad element = Keypad(makeKeymap(this->keymap), this->pinCol, this->pinRow, 4, 4);
+};
+
+displayerElement Displayer(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+keypadInputElement keypad;
+elevator ele1, ele2;
+int inputNum = 0;
+
+void Update()
+{
+    for (int i = 1; i <= 100; i++)
+        Displayer.update(ele1.get_floor(), ele2.get_floor());
+    // 透過Keypad物件的getKey()方法讀取按鍵的字元
+    char key = keypad.get_keypressChar();
+    if (key)
+    { // 若有按鍵被按下…
+        if (key == '*')
+            Displayer.display_status(ele1.get_status(), ele2.get_status());
+        else if (key == '#')
+        {
+            // Algorithm...
+
+            inputNum = 0;
+        }
+        else if (key >= '0' && key <= '9')
+        {
+            inputNum *= 10;
+            inputNum += key - '0';
+        }
+    }
+}
 
 void setup()
 {
     Serial.begin(9600);
+    /*
     pinMode(2, OUTPUT);
     pinMode(3, OUTPUT);
+    */
+    pinMode(2, INPUT);
+    pinMode(3, INPUT);
     pinMode(4, OUTPUT);
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
@@ -284,9 +375,15 @@ void setup()
     pinMode(11, OUTPUT);
     pinMode(12, OUTPUT);
     pinMode(13, OUTPUT);
+    pinMode(A0, INPUT);
+    pinMode(A1, INPUT);
+    pinMode(A2, INPUT);
+    pinMode(A3, INPUT);
+    pinMode(A4, INPUT);
+    pinMode(A5, INPUT);
 }
 
 void loop()
 {
-    numberDisplayer.update(88, 88);
+    Update();
 }
