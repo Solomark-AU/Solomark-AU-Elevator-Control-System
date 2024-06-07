@@ -3,6 +3,7 @@
     "configurations": [
         {
             "name": "Arduino",
+            "compilerPath": "/usr/bin/g++",
             "compilerArgs": [
                 "-w",
                 "-std=gnu++11",

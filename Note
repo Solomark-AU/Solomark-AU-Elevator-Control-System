@@ -3,6 +3,5 @@ Tips:
 
 注：
 一、内存不够时
-1.将engine从Arduino/Arduino.ino中独立出来交给另一块板子
 2.板间通信
 

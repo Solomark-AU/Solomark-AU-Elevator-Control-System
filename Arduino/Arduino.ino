@@ -20,13 +20,12 @@ struct engine
 {
     int ID;
     status STATUS = STATIC;
-    // 为解决bug设置
 };
 
-template <typename T_>
-void swap(T_ *src, T_ *val)
+template <typename T>
+void swap(T *src, T *val)
 {
-    T_ *temp;
+    T *temp;
     temp = src;
     val = src;
     src = temp;
@@ -43,41 +42,24 @@ public:
 
     ~Container() {}
 
-    int size() { return length; }
+    int size() { return this->length; }
 
-    void push_back(T value) { datas[length++] = value; }
+    void push_back(T value) { this->datas[this->length++] = value; }
 
     void insert(int index, T value)
     {
-        length++;
-        for (int i = index; i < length; i++)
-            datas[i] = datas[i + 1];
-        datas[index] = value;
-    }
-
-    int partition(int low, int high)
-    {
-        T pivotKey = datas[low];
-        while (low < high)
-        {
-            while ((low < high) && (pivotKey <= datas[high]))
-                --high;
-            swap(datas[low], datas[high]);
-            while ((low < high) && (datas[low] <= pivotKey))
-                ++low;
-            swap(datas[low], datas[high]);
-        }
-        datas[low] = pivotKey;
-        return low;
+        for (int i = this->length++; i >= index; i--)
+            this->datas[i + 1] = this->datas[i];
+        this->datas[index] = value;
     }
 
     void sort(int low, int high)
     {
         if (low < high)
         {
-            int pivot = partition(datas, low, high);
-            sort(low, pivot - 1);
-            sort(pivot + 1, high);
+            int pivot = this->partition(low, high);
+            this->sort(low, pivot - 1);
+            this->sort(pivot + 1, high);
         }
     }
 
@@ -90,9 +72,33 @@ public:
         return result;
     }
 
-    T front() { return datas[0]; }
+    T front() { return this->datas[0]; }
 
-    T back() { return datas[length]; }
+    T back() { return this->datas[this->length - 1]; }
+
+    T operator[](int index)
+    {
+        /*if (index >= length || index < 0)
+            throw "IndexError: Out of the index.";*/
+        return this->datas[index];
+    }
+
+private:
+    int partition(int low, int high)
+    {
+        T pivotKey = this->datas[low];
+        while (low < high)
+        {
+            while ((low < high) && (pivotKey <= this->datas[high]))
+                --high;
+            swap(this->datas[low], this->datas[high]);
+            while ((low < high) && (this->datas[low] <= pivotKey))
+                ++low;
+            swap(this->datas[low], this->datas[high]);
+        }
+        this->datas[low] = pivotKey;
+        return low;
+    }
 };
 
 Container<engine> engines;
@@ -101,13 +107,7 @@ Container<engine> engines;
 class elevator
 {
 public:
-    elevator()
-    {
-        this->ID = ++ELEVATOR_NUMBER;
-        engine temp;
-        temp.ID = this->ID;
-        engines.push_back(temp);
-    }
+    elevator() { this->ID = ++ELEVATOR_NUMBER; }
 
     ~elevator() {}
 
@@ -115,10 +115,17 @@ public:
 
     int get_floor() { return this->floor; }
 
+    void set_engine()
+    {
+        engine temp;
+        temp.ID = this->ID;
+        engines.push_back(temp);
+    }
+
     status get_status() { return this->STATUS; }
 
 private:
-    int ID, floor, station; // station 常驻楼层
+    int ID, floor = 0, station; // station 常驻楼层
     status STATUS = STATIC;
 };
 
@@ -329,29 +336,36 @@ private:
 
 displayerElement Displayer(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
 keypadInputElement keypad;
-elevator ele1, ele2;
-int inputNum = 0;
+Container<elevator> elevators;
+int inputNum[2] = {0, 0}; // RequestFloor,TargetFloor
+bool mode = 0;            // True:TargetFloor False:RequestFloor
 
 void Update()
 {
     for (int i = 1; i <= 100; i++)
-        Displayer.update(ele1.get_floor(), ele2.get_floor());
+        Displayer.update(elevators[0].get_floor(), elevators[1].get_floor());
     // 透過Keypad物件的getKey()方法讀取按鍵的字元
     char key = keypad.get_keypressChar();
     if (key)
     { // 若有按鍵被按下…
         if (key == '*')
-            Displayer.display_status(ele1.get_status(), ele2.get_status());
+            Displayer.display_status(elevators[0].get_status(), elevators[0].get_status());
         else if (key == '#')
         {
-            // Algorithm...
+            if (mode = true)
+            {
+                // Algorithm...
 
-            inputNum = 0;
+                inputNum[0] = inputNum[1] = 0;
+                mode = false;
+            }
+            else
+                mode = true;
         }
         else if (key >= '0' && key <= '9')
         {
-            inputNum *= 10;
-            inputNum += key - '0';
+            inputNum[mode] *= 10;
+            inputNum[mode] += key - '0';
         }
     }
 }
@@ -359,28 +373,10 @@ void Update()
 void setup()
 {
     Serial.begin(9600);
-    /*
-    pinMode(2, OUTPUT);
-    pinMode(3, OUTPUT);
-    */
-    pinMode(2, INPUT);
-    pinMode(3, INPUT);
-    pinMode(4, OUTPUT);
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
-    pinMode(7, OUTPUT);
-    pinMode(8, OUTPUT);
-    pinMode(9, OUTPUT);
-    pinMode(10, OUTPUT);
-    pinMode(11, OUTPUT);
-    pinMode(12, OUTPUT);
-    pinMode(13, OUTPUT);
-    pinMode(A0, INPUT);
-    pinMode(A1, INPUT);
-    pinMode(A2, INPUT);
-    pinMode(A3, INPUT);
-    pinMode(A4, INPUT);
-    pinMode(A5, INPUT);
+    elevators.push_back(elevator());
+    elevators.back().set_engine();
+    elevators.push_back(elevator());
+    elevators.back().set_engine();
 }
 
 void loop()
