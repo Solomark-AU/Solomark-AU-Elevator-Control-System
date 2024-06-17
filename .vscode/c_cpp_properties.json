@@ -3,11 +3,7 @@
     "configurations": [
         {
             "name": "Arduino",
-<<<<<<< HEAD
-            "compilerPath": "/home/herobrine6265/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++",
-=======
             "compilerPath": "/home/link/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++",
->>>>>>> 11c50a6 (内容更新Content Update)
             "compilerArgs": [
                 "-w",
                 "-std=gnu++11",
@@ -20,17 +16,6 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-<<<<<<< HEAD
-                "/home/herobrine6265/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino",
-                "/home/herobrine6265/.arduino15/packages/arduino/hardware/avr/1.8.6/variants/standard",
-                "/home/herobrine6265/Arduino/libraries/Keypad/src",
-                "/home/herobrine6265/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include",
-                "/home/herobrine6265/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include-fixed",
-                "/home/herobrine6265/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
-            ],
-            "forcedInclude": [
-                "/home/herobrine6265/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino/Arduino.h"
-=======
                 "/home/link/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino",
                 "/home/link/.arduino15/packages/arduino/hardware/avr/1.8.6/variants/standard",
                 "/home/link/Arduino/libraries/Adafruit_MCP23017_Arduino_Library/src",
@@ -44,7 +29,6 @@
             ],
             "forcedInclude": [
                 "/home/link/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino/Arduino.h"
->>>>>>> 11c50a6 (内容更新Content Update)
             ],
             "cStandard": "c11",
             "cppStandard": "c++11",

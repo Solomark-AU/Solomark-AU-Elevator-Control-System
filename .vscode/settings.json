@@ -9,11 +9,7 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "vector": "cpp"
-<<<<<<< HEAD
-    }
-=======
     },
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 500,
->>>>>>> 11c50a6 (内容更新Content Update)
 }
