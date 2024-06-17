@@ -41,9 +41,6 @@ template <typename T>
 class Container
 {
 public:
-    int length = 0;
-    T datas[MAXCONTAINERNUMBER];
-
     Container() {}
 
     ~Container() {}
@@ -60,6 +57,8 @@ public:
             this->datas[i + 1] = this->datas[i];
         this->datas[index] = value;
     }
+
+    void clear() { this->length = 0; }
 
     void sort(int low, int high)
     {
@@ -109,6 +108,8 @@ public:
     T operator[](int index) { return this->datas[index]; }
 
 private:
+    int length = 0;
+    T datas[MAXCONTAINERNUMBER];
     int partition(int low, int high)
     {
         T pivotKey = this->datas[low];
@@ -289,33 +290,41 @@ public:
         this->ID = ++ELEVATOR_NUMBER;
         this->engine[0] = engine_H;
         this->engine[1] = engine_L;
+        for (int i = 0; i < MAXFLOORNUMBER; i++)
+            this->count[i] = 0;
     }
 
     ~elevator() {}
 
     void add_target(int request, int target)
     {
-        Serial.println("Add-target:");
+        Serial.println("Add-target:(id, request, target, status)");
+        Serial.println((int)&(this->ID));
+        Serial.println(this->ID);
         Serial.println(request);
         Serial.println(target);
-        Serial.println("\n");
 
         if (request < target)
-            this->STATUS = UPSIDE;
+            this->STATUS = status::UPSIDE;
         else
-            this->STATUS = DOWNSIDE;
+            this->STATUS = status::DOWNSIDE;
         if (this->isAvailable)
         {
-            this->target.erase(0);
+            if (!this->target.empty())
+                this->target.erase(0);
             Core.digitalWrite(this->engine[0], request < target ? HIGH : LOW);
             Core.digitalWrite(this->engine[1], request < target ? LOW : HIGH);
         }
         this->target.push_back(request);
         this->target.push_back(target);
         if (!this->isAvailable)
-            this->target.sort(0, this->target.length);
+            this->target.sort(0, this->target.size());
         this->isAvailable = false;
         this->count[request - 1]++;
+
+        Serial.println(this->STATUS);
+        Serial.println("\n");
+        delay(5000);
     }
 
     void move()
@@ -326,7 +335,14 @@ public:
             open_door(this->STATUS);
         for (int i = 0; i < MAXFLOORNUMBER; i++)
             this->station = this->count[this->station] <= this->count[i] ? this->station : i + 1;
-        
+        Serial.println("Info-Elevator:(*id, id, status, floor, high, targetNumbers)");
+        Serial.println((int)&(this->ID));
+        Serial.println(this->ID);
+        Serial.println(this->STATUS);
+        Serial.println(this->floor);
+        Serial.println(this->high);
+        Serial.println(this->target.size());
+        Serial.println("\n");
     }
 
     void open_door(status s)
@@ -336,6 +352,7 @@ public:
         Serial.println(this->floor);
         Serial.println(this->engine[0]);
         Serial.println("\n");
+        delay(5000);
 
         Core.digitalWrite(this->engine[0], LOW);
         Core.digitalWrite(this->engine[1], LOW);
@@ -387,9 +404,9 @@ public:
     status get_status() { return this->STATUS; }
 
 private:
-    int floor = 1, station = 1, high; // station 常驻楼层
+    int floor = 1, station = 1, high = 0; // station 常驻楼层
     int engine[2], count[MAXFLOORNUMBER];
-    status STATUS = STATIC;
+    status STATUS = status::STATIC;
     Container<int> target;
 };
 
@@ -414,7 +431,7 @@ private:
     Container<elevator> group;
 };
 
-Container<elevator> elevators;
+Container<elevator *> elevators;
 int inputNum[2] = {0, 0}; // RequestFloor,TargetFloor
 bool mode = false;        // True:TargetFloor False:RequestFloor
 
@@ -434,8 +451,10 @@ void setup()
     Core.begin_I2C();
     for (int i = 2; i < 14; i++)
         pinMode(i, OUTPUT);
-    elevators.push_back(elevator(1, 2));
-    elevators.push_back(elevator(3, 4));
+    elevator temp_obj1(1, 2), temp_obj2(3, 4);
+    elevator *ptr1 = &temp_obj1, *ptr2 = &temp_obj2;
+    elevators.push_back(ptr1);
+    elevators.push_back(ptr2);
 
     for (int i = 1; i <= 4; i++)
         Core.pinMode(i, OUTPUT);
@@ -443,16 +462,11 @@ void setup()
 
 void loop()
 {
-    Core.digitalWrite(1, HIGH);
-    Core.digitalWrite(2, LOW);
-    Core.digitalWrite(3, HIGH);
-    Core.digitalWrite(4, HIGH);
-
-    Display.display_number(elevators[0].get_floor(), elevators[1].get_floor());
+    Display.display_number((*elevators[0]).get_floor(), (*elevators[1]).get_floor());
     char key = Key.getKey();
     if (key == '*')
         for (int i = 1; i <= 500; i++)
-            Display.display_status(elevators[0].get_status(), elevators[1].get_status());
+            Display.display_status((*elevators[0]).get_status(), (*elevators[1]).get_status());
     else if (key <= '9' && key >= '0')
     {
         inputNum[mode] = key - '0';
@@ -463,20 +477,20 @@ void loop()
             int minDistance = 1024, minDistanceNum = 0;
             for (int i = 0; i < elevators.size(); i++)
             {
-                if (elevators[i].isAvailable == 1 ||
-                    (elevators[i].get_status() * (inputNum[0] - elevators[i].get_floor()) > 0 &&
-                     elevators[i].get_status() * (inputNum[1] - inputNum[0]) > 0))
+                if ((*elevators[i]).isAvailable == 1 ||
+                    ((*elevators[i]).get_status() * (inputNum[0] - (*elevators[i]).get_floor()) > 0 &&
+                     (*elevators[i]).get_status() * (inputNum[1] - inputNum[0]) > 0))
                 {
-                    if (abs(inputNum[0] - elevators[i].get_floor()) < minDistance)
+                    if (abs(inputNum[0] - (*elevators[i]).get_floor()) < minDistance)
                     {
                         minDistanceNum = i;
-                        minDistance = abs(inputNum[0] - elevators[i].get_floor());
+                        minDistance = abs(inputNum[0] - (*elevators[i]).get_floor());
                     }
                 }
             }
             Serial.println("op-elevator:");
-            Serial.println(minDistanceNum);
-            elevators[minDistanceNum].add_target(inputNum[0], inputNum[1]);
+            Serial.println((int)((*elevators[minDistanceNum]).ID));
+            (*elevators[minDistanceNum]).add_target(inputNum[0], inputNum[1]);
             mode = false;
         }
         else
@@ -487,5 +501,5 @@ void loop()
         }
     }
     for (int i = 0; i < elevators.size(); i++)
-        elevators[i].move();
+        (*elevators[i]).move();
 }
