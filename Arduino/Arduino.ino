@@ -5,7 +5,7 @@
 #include <Keypad.h>
 
 const int ELEVATORSPEED = 1;
-const int HIGHOFBUILDING = 10000;
+const int HIGHOFFLOOR = 10000;
 const int MAXFLOORNUMBER = 4;
 const int MAXSERVERNUMBER = 4;
 const int MAXCONTAINERNUMBER = 4;
@@ -127,55 +127,6 @@ private:
 };
 
 Container<engine> engines;
-
-// 电梯类
-class elevator
-{
-public:
-    elevator() { this->ID = ++ELEVATOR_NUMBER; }
-
-    ~elevator() {}
-
-    void move(int target) {}
-
-    int get_floor() { return this->floor; }
-
-    void set_engine()
-    {
-        engine temp;
-        temp.ID = this->ID;
-        engines.push_back(temp);
-    }
-
-    status get_status() { return this->STATUS; }
-
-private:
-    int ID, floor = 0, station; // station 常驻楼层
-    status STATUS = STATIC;
-};
-
-// elevatorWell 电梯井部分
-class elevatorWell
-{
-public:
-    elevatorWell()
-    {
-        register_elevator();
-    }
-    ~elevatorWell() {}
-
-    int get_elevatorNumbers() { return WellNumber; };
-
-    void register_elevator()
-    {
-        WellNumber++;
-        this->group.push_back(elevator());
-    };
-
-private:
-    int WellNumber = 1;
-    Container<elevator> group;
-};
 
 // 楼层显示部分
 class displayerElement
@@ -369,16 +320,23 @@ public:
 
     void move()
     {
-        this->high = this->STATUS * ELEVATORSPEED;
-        this->floor = (this->high - this->high % HIGHOFBUILDING) % HIGHOFBUILDING + 1;
-        if (this->high % HIGHOFBUILDING == 0 && this->target == this->floor)
+        this->high += this->STATUS * ELEVATORSPEED;
+        this->floor = this->high / HIGHOFFLOOR + 1;
+        if (this->high % HIGHOFFLOOR == 0 && this->target == this->floor)
             open_door(this->STATUS);
         for (int i = 0; i < MAXFLOORNUMBER; i++)
             this->station = this->count[this->station] <= this->count[i] ? this->station : i + 1;
+        
     }
 
     void open_door(status s)
     {
+        Serial.println("Open-door:");
+        Serial.println(this->ID);
+        Serial.println(this->floor);
+        Serial.println(this->engine[0]);
+        Serial.println("\n");
+
         Core.digitalWrite(this->engine[0], LOW);
         Core.digitalWrite(this->engine[1], LOW);
         this->target.del(this->floor);
@@ -466,7 +424,8 @@ const char keymap[4][4] = {
     {'1', '2', '3', 'A'},
     {'4', '5', '6', 'B'},
     {'7', '8', '9', 'C'},
-    {'*', '0', '#', 'D'}};
+    {'*', '0', '#', 'D'},
+};
 Keypad Key(makeKeymap(keymap), rowPins, colPins, 4, 4);
 
 void setup()
@@ -478,12 +437,17 @@ void setup()
     elevators.push_back(elevator(1, 2));
     elevators.push_back(elevator(3, 4));
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 1; i <= 4; i++)
         Core.pinMode(i, OUTPUT);
 }
 
 void loop()
 {
+    Core.digitalWrite(1, HIGH);
+    Core.digitalWrite(2, LOW);
+    Core.digitalWrite(3, HIGH);
+    Core.digitalWrite(4, HIGH);
+
     Display.display_number(elevators[0].get_floor(), elevators[1].get_floor());
     char key = Key.getKey();
     if (key == '*')
@@ -510,7 +474,7 @@ void loop()
                     }
                 }
             }
-            Serial.println("elevator:");
+            Serial.println("op-elevator:");
             Serial.println(minDistanceNum);
             elevators[minDistanceNum].add_target(inputNum[0], inputNum[1]);
             mode = false;
