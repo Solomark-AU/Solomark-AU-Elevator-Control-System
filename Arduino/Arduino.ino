@@ -5,7 +5,7 @@
 #include <Keypad.h>
 
 const int ELEVATORSPEED = 1;
-const int HIGHOFFLOOR = 10000;
+const int HIGHOFFLOOR = 100;
 const int MAXFLOORNUMBER = 4;
 const int MAXSERVERNUMBER = 4;
 const int MAXCONTAINERNUMBER = 4;
@@ -13,7 +13,7 @@ int ELEVATOR_NUMBER = 0;
 Adafruit_MCP23X17 Core;
 
 // status 电梯状态
-// DOWNSIDE下行 STATIC不动 UPSIDE上行
+// status::DOWNSIDE下行 STATIC不动 UPSIDE上行
 enum status
 {
     DOWNSIDE = -1,
@@ -72,7 +72,7 @@ public:
 
     T del(T value)
     {
-        for (int i = 0; i < length - 1; i++)
+        for (int i = 0; i < length; i++)
         {
             if (this->datas[i] == value)
             {
@@ -99,7 +99,7 @@ public:
     {
         if (this->length == 0)
             return false;
-        for (int i = 0; i < this->length - 1; i++)
+        for (int i = 0; i < this->length; i++)
             if (this->datas[i] == index)
                 return true;
         return false;
@@ -196,17 +196,17 @@ public:
     void display_status(status elevator1, status elevator2, int keepTime = 1)
     {
         int index[2] = {0, 0};
-        if (elevator1 == UPSIDE)
+        if (elevator1 == status::UPSIDE)
             index[0] = 13;
-        else if (elevator1 == STATIC)
+        else if (elevator1 == status::STATIC)
             index[0] = 11;
-        else if (elevator1 == DOWNSIDE)
+        else if (elevator1 == status::DOWNSIDE)
             index[0] = 0;
-        if (elevator2 == UPSIDE)
+        if (elevator2 == status::UPSIDE)
             index[1] = 13;
-        else if (elevator2 == STATIC)
+        else if (elevator2 == status::STATIC)
             index[1] = 11;
-        else if (elevator2 == DOWNSIDE)
+        else if (elevator2 == status::DOWNSIDE)
             index[1] = 0;
         this->display_character(2, index[0], keepTime);
         this->display_character(4, index[1], keepTime);
@@ -324,77 +324,76 @@ public:
 
         Serial.println(this->STATUS);
         Serial.println("\n");
-        delay(5000);
     }
 
     void move()
     {
+        if (this->high % HIGHOFFLOOR == 0 && this->target == this->floor)
+            open_door();
         this->high += this->STATUS * ELEVATORSPEED;
         this->floor = this->high / HIGHOFFLOOR + 1;
-        if (this->high % HIGHOFFLOOR == 0 && this->target == this->floor)
-            open_door(this->STATUS);
         for (int i = 0; i < MAXFLOORNUMBER; i++)
             this->station = this->count[this->station] <= this->count[i] ? this->station : i + 1;
-        Serial.println("Info-Elevator:(*id, id, status, floor, high, targetNumbers)");
-        Serial.println((int)&(this->ID));
-        Serial.println(this->ID);
-        Serial.println(this->STATUS);
-        Serial.println(this->floor);
-        Serial.println(this->high);
-        Serial.println(this->target.size());
-        Serial.println("\n");
     }
 
-    void open_door(status s)
+    void open_door()
     {
         Serial.println("Open-door:");
         Serial.println(this->ID);
         Serial.println(this->floor);
         Serial.println(this->engine[0]);
         Serial.println("\n");
-        delay(5000);
 
         Core.digitalWrite(this->engine[0], LOW);
         Core.digitalWrite(this->engine[1], LOW);
         this->target.del(this->floor);
+
+        Serial.println(this->target.size());
+        Serial.println(this->target[0]);
         delay(2000);
+
         if (this->target.empty())
         {
             this->isAvailable = true;
             if (this->floor != this->station)
+            {
                 this->target.push_back(this->station);
-        }
-        else
-        {
-            if (s == UPSIDE)
-            {
-                if (this->target.back() == this->floor)
-                {
-                    Core.digitalWrite(this->engine[0], LOW);
-                    Core.digitalWrite(this->engine[1], HIGH);
-                    this->STATUS = DOWNSIDE;
-                }
-                else
-                {
-                    Core.digitalWrite(this->engine[0], HIGH);
-                    Core.digitalWrite(this->engine[1], LOW);
-                    this->STATUS = UPSIDE;
-                }
+                this->STATUS = (this->station > this->floor ? status::UPSIDE : status::DOWNSIDE);
             }
-            else if (s == DOWNSIDE)
+            else
             {
-                if (this->target.front() == this->floor)
-                {
-                    Core.digitalWrite(this->engine[0], HIGH);
-                    Core.digitalWrite(this->engine[1], LOW);
-                    this->STATUS = UPSIDE;
-                }
-                else
-                {
-                    Core.digitalWrite(this->engine[0], LOW);
-                    Core.digitalWrite(this->engine[1], HIGH);
-                    this->STATUS = DOWNSIDE;
-                }
+                this->STATUS = status::STATIC;
+                return;
+            }
+        }
+        if (this->STATUS == status::UPSIDE)
+        {
+            if (this->target.back() == this->floor)
+            {
+                Core.digitalWrite(this->engine[0], LOW);
+                Core.digitalWrite(this->engine[1], HIGH);
+                this->STATUS = status::DOWNSIDE;
+            }
+            else
+            {
+                Core.digitalWrite(this->engine[0], HIGH);
+                Core.digitalWrite(this->engine[1], LOW);
+                this->STATUS = status::UPSIDE;
+            }
+        }
+        else if (this->STATUS == status::DOWNSIDE)
+        {
+            if (this->target.front() == this->floor)
+            {
+                Core.digitalWrite(this->engine[0], HIGH);
+                Core.digitalWrite(this->engine[1], LOW);
+                this->STATUS = status::UPSIDE;
+            }
+            else
+            {
+                Core.digitalWrite(this->engine[0], LOW);
+                Core.digitalWrite(this->engine[1], HIGH);
+                this->STATUS = status::DOWNSIDE;
             }
         }
     }
@@ -447,7 +446,7 @@ Keypad Key(makeKeymap(keymap), rowPins, colPins, 4, 4);
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Core.begin_I2C();
     for (int i = 2; i < 14; i++)
         pinMode(i, OUTPUT);
@@ -465,8 +464,16 @@ void loop()
     Display.display_number((*elevators[0]).get_floor(), (*elevators[1]).get_floor());
     char key = Key.getKey();
     if (key == '*')
+    {
         for (int i = 1; i <= 500; i++)
             Display.display_status((*elevators[0]).get_status(), (*elevators[1]).get_status());
+        Serial.println("Info-Elevator:(*id, id, status, floor, high, targetNumbers)");
+        Serial.println((int)&(elevators[0]->ID));
+        Serial.println(elevators[0]->ID);
+        Serial.println(elevators[0]->get_status());
+        Serial.println(elevators[0]->get_floor());
+        Serial.println("\n");
+    }
     else if (key <= '9' && key >= '0')
     {
         inputNum[mode] = key - '0';
