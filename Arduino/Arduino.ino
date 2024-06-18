@@ -5,7 +5,11 @@
 #include <Keypad.h>
 
 const int ELEVATORSPEED = 1;
+<<<<<<< HEAD
 const int HIGHOFFLOOR = 100;
+=======
+const int HIGHOFFLOOR = 300;
+>>>>>>> 4208a3b (Fix_Update)
 const int MAXFLOORNUMBER = 4;
 const int MAXSERVERNUMBER = 4;
 const int MAXCONTAINERNUMBER = 4;
@@ -304,7 +308,7 @@ public:
         Serial.println(request);
         Serial.println(target);
 
-        if (request < target)
+        if (this->floor < request)
             this->STATUS = status::UPSIDE;
         else
             this->STATUS = status::DOWNSIDE;
@@ -328,12 +332,30 @@ public:
 
     void move()
     {
+        if ((this->high <= 0 && this->STATUS == status::DOWNSIDE) || (this->high >= HIGHOFFLOOR * MAXFLOORNUMBER && this->STATUS == status::UPSIDE))
+        {
+            Serial.println("Out of rangement:(ID)");
+            Serial.println(this->ID);
+            this->STATUS = status::STATIC;
+            Core.digitalWrite(this->engine[0], LOW);
+            Core.digitalWrite(this->engine[1], LOW);
+        }
+        else
+        {
+            this->high += this->STATUS * ELEVATORSPEED;
+            this->floor = this->high / HIGHOFFLOOR + 1;
+        }
         if (this->high % HIGHOFFLOOR == 0 && this->target == this->floor)
-            open_door();
-        this->high += this->STATUS * ELEVATORSPEED;
-        this->floor = this->high / HIGHOFFLOOR + 1;
+            open_door(this->STATUS);
         for (int i = 0; i < MAXFLOORNUMBER; i++)
             this->station = this->count[this->station] <= this->count[i] ? this->station : i + 1;
+        Serial.println("Info-Elevator:(*id, status, floor, high, targetNumbers)");
+        Serial.println((int)&(this->ID));
+        Serial.println(this->STATUS);
+        Serial.println(this->floor);
+        Serial.println(this->high);
+        Serial.println(this->target.size());
+        Serial.println("\n");
     }
 
     void open_door()
