@@ -5,11 +5,7 @@
 #include <Keypad.h>
 
 const int ELEVATORSPEED = 1;
-<<<<<<< HEAD
 const int HIGHOFFLOOR = 100;
-=======
-const int HIGHOFFLOOR = 300;
->>>>>>> 4208a3b (Fix_Update)
 const int MAXFLOORNUMBER = 4;
 const int MAXSERVERNUMBER = 4;
 const int MAXCONTAINERNUMBER = 4;
@@ -346,7 +342,7 @@ public:
             this->floor = this->high / HIGHOFFLOOR + 1;
         }
         if (this->high % HIGHOFFLOOR == 0 && this->target == this->floor)
-            open_door(this->STATUS);
+            open_door();
         for (int i = 0; i < MAXFLOORNUMBER; i++)
             this->station = this->count[this->station] <= this->count[i] ? this->station : i + 1;
         Serial.println("Info-Elevator:(*id, status, floor, high, targetNumbers)");
