@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include "jsoncpp/json/json.h"
+#include "Algorithm.hpp"
 using namespace std;
 using namespace Json;
 
@@ -17,26 +18,26 @@ void init_module(const char *configPath)
 {
     config.open(configPath);
     if (!config.is_open())
-        throw "FileNotOpenedError: the target file is not opened.";
+        throw "FileNotOpenedError: The target file is not opened.";
     if (!reader.parse(config, root, false))
-        throw "FileDecodeFalureError: decode the config file unsuccessfully.";
+        throw "FileDecodeFailureError: Decode the config file unsuccessfully.";
     floorNumber = get_configData(&config, "floorNumber");
     highOfFloor = get_configData(&config, "highOfFloor");
     elevatorSpeed = get_configData(&config, "elevatorSpeed");
     elevatorNumber = get_configData(&config, "elevatorNumber");
 }
 
-struct outputDataSwaper
+struct dataSwaper
 {
+    int floor;
+    STATUS status_;
+    vector<REQUEST> *targets;
 };
 
-struct inputDataSwaper
-{
-};
+
 
 int main()
 {
     init_module("configure.json");
-    cout << floorNumber << highOfFloor << elevatorNumber << elevatorSpeed;
     return 0;
 }

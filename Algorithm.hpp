@@ -1,3 +1,5 @@
+#ifndef SOLOMARK_AU_ALGORITHM
+#define SOLOMARK_AU_ALGORITHM
 #include <ctime>
 #include <vector>
 #include <iostream>
@@ -177,13 +179,4 @@ private:
     STATUS status = STATUS::STATIC;
     bool isAvailable = true;
 };
-
-int main()
-{
-    while (true)
-    {
-        int request, target;
-        cin >> request >> target;
-    }
-    return 0;
-}
+#endif
