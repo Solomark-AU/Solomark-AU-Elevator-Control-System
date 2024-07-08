@@ -60,13 +60,13 @@ inline void reset_assignment(vector<dataSwaper> *data_)
         for (dataSwaper obj : *data_)
         {
             int cnt = 0;
+            requestData *t;
             for (requestData *d : reqPool[obj.floor + obj.status_])
             {
                 cnt++;
                 if (d->isUp == obj.status_ && ((!d->finiR && obj.status_ > 0 ? d->request <= obj.maxF : d->request >= obj.minF && obj.status_ > 0 ? d->request > obj.floor : d->request < obj.floor) ||
                 (!d->finiT && obj.status_ > 0 ? d->target <= obj.maxF : d->target >= obj.minF && obj.status_ > 0 ? d->target > obj.floor : d->target < obj.floor)))
                 {
-                    requestData *t;
                     arrange_target(d);
                     t = d;
                     d = nullReq;
@@ -74,8 +74,8 @@ inline void reset_assignment(vector<dataSwaper> *data_)
                 }
             }
             if (!cnt) {
-                arrange_target((*d)[0]);
-                &((*d)[0]) = nullReq;
+                arrange_target(reqPool[obj.floor + obj.status_][0]);
+                reqPool[obj.floor + obj.status_][0] = nullReq;
                 whole--;
             }
             else {
