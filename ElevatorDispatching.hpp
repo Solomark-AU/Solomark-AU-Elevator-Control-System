@@ -22,13 +22,6 @@ enum STATUS
     DOWNSIDE = -1
 };
 
-struct dataSwaper
-{
-    int maxF, minF, floor;
-    STATUS status_;
-    vector<REQUEST> *targets;
-};
-
 struct REQUEST
 {
     int req, tar;
@@ -37,6 +30,13 @@ struct REQUEST
     {
         return this->req == b.req && this->tar == b.tar && this->status == b.status;
     }
+};
+
+struct dataSwaper
+{
+    int maxF, minF, floor;
+    STATUS status_;
+    vector<REQUEST> *targets;
 };
 
 bool cmp_bigger(int a, int b)
