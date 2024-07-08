@@ -1,5 +1,5 @@
-#ifndef SOLOMARK_AU_ALGORITHM
-#define SOLOMARK_AU_ALGORITHM
+#ifndef SOLOMARK_AU_ELEVATORDISPATCH
+#define SOLOMARK_AU_ELEVATORDISPATCH
 #include <ctime>
 #include <vector>
 #include <iostream>
