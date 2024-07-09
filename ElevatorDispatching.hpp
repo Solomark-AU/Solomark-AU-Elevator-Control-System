@@ -8,8 +8,8 @@
 using namespace std;
 using namespace Json;
 
-const int MAXFLOORNUM = 3000, MAXELEVATORNUM = 15;
-int FLOOR, ELEVATORNUM, HighOfFloor, Speed;
+const int MAXFLOORNUM = 10, MAXELEVATORNUM = 15;
+int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed;
 
 int requestedNum[MAXFLOORNUM + 5][7][25][65]; // Count by minute and allows a inaccuracy of ±5 mins;
 int station[25][65][MAXELEVATORNUM + 5][7];   //
@@ -39,20 +39,32 @@ struct dataSwaper
     vector<REQUEST> *targets;
 };
 
-bool cmp_bigger(int a, int b)
+struct StationInfo
 {
-    return a > b;
+    int ReqNum, StationFloor;
+};
+
+bool cmp_bigger(StationInfo a, StationInfo b)
+{
+    return a.ReqNum > b.ReqNum;
 }
 
 class Elevator
 {
 public:
+    Elevator()
+    {
+        ELEVATORNUM++;
+        this->ID = ELEVATORNUM;
+    }
+
     Elevator(int id) { this->ID = id; }
 
     ~Elevator() {}
 
     void add_target(int req, int tar)
     {
+        cout << "[LINK]Elevator::add_target():Get the data {" << req << ", " << tar << "},\n";
         time_t t;
         time(&t);
         tm *time_info = localtime(&t);
@@ -61,34 +73,34 @@ public:
             for (int i = 0; i < 25; i++)
                 for (int j = 0; j < 61; j++)
                 {
-                    vector<int> reqNum;
+                    vector<StationInfo> reqNum;
                     for (int k = 1; k < MAXFLOORNUM; k++)
                     {
-                        reqNum.push_back(requestedNum[k][time_info->tm_wday][i][j]);
+                        reqNum.push_back(StationInfo{requestedNum[k][time_info->tm_wday][i][j], k});
                         requestedNum[k][time_info->tm_wday][i][j] = 0;
                     }
                     sort(reqNum.begin(), reqNum.end(), cmp_bigger);
                     for (int k = 1; k <= ELEVATORNUM && k <= 10; k++)
                     {
                         requestedNum[station[i][j][k][time_info->tm_wday]][time_info->tm_wday][i][j] += 11 - k;
-                        station[i][j][k][time_info->tm_wday] = reqNum[k - 1];
+                        station[i][j][k][time_info->tm_wday] = reqNum[k - 1].StationFloor;
                     }
                     requestedNum[FLOOR / 2][time_info->tm_wday][i][j] += 3;
                 }
             LastUpDate = time_info->tm_wday;
         }
-        for (int i = -5; i <= 5; t++)
+        t -= 300;
+        for (int i = -5; i <= 5; i++)
         {
-            t -= i * 60;
             tm *temp = localtime(&t);
             requestedNum[req][temp->tm_wday][temp->tm_hour][temp->tm_min]++;
-            vector<int> reqNum;
+            vector<StationInfo> reqNum;
             for (int k = 1; k < MAXFLOORNUM; k++)
-                reqNum.push_back(requestedNum[k][temp->tm_wday][temp->tm_hour][temp->tm_min]);
+                reqNum.push_back(StationInfo{requestedNum[k][temp->tm_wday][temp->tm_hour][temp->tm_min], k});
             sort(reqNum.begin(), reqNum.end(), cmp_bigger);
             for (int k = 1; k <= ELEVATORNUM && k <= 10; k++)
-                station[temp->tm_hour][temp->tm_min][k][time_info->tm_wday] = reqNum[k - 1];
-            t += i * 60;
+                station[temp->tm_hour][temp->tm_min][k][time_info->tm_wday] = reqNum[k - 1].StationFloor;
+            t += 60;
         }
         // push into vector
         this->target.push_back(REQUEST{req, tar, -1});
@@ -311,8 +323,6 @@ public:
             return this->GetWayTargetNumber(-1);
         return -1;
     }
-
-    STATUS get_status() { return this->status; }
 
 private:
     int floor = 1, high = 0, ID; // station 常驻楼层
