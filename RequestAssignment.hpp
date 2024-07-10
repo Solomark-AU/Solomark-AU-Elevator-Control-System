@@ -43,69 +43,7 @@ inline void add_target(int request, int target);
 
 inline void register_target(requestData *d, int floor);
 
-inline void reset_assignment(vector<dataSwaper> *data_);
-
 inline int get_configData(ifstream *file, const char *key);
-
-inline void reset_assignment(vector<dataSwaper> *data_)
-{
-    int DebugCounter = 0;
-    while (whole > 0 && DebugCounter < 20)
-    {
-        DebugCounter++;
-        cout << "RESET ASSIGNMENT: with the \"whole\"" << whole << "\n";
-        int index = 0;
-        debug_displayPtrSheetReqPool();
-        for (dataSwaper obj : *data_)
-        {
-            int cnt = 0;
-            requestData *t;
-            for (requestData *d : reqPool[obj.floor + obj.status_])
-            // for (int i = 0; i < 50; i++)
-            {
-                // requestData *d = reqPool[obj.floor + obj.status_][i];
-                cnt++;
-                if (d == NULL)
-                    break;
-                if (d->isUp == obj.status_ && ((!d->finiR && obj.status_ > 0 ? d->request <= obj.maxF : d->request >= obj.minF && obj.status_ > 0 ? d->request > obj.floor
-                                                                                                                                                  : d->request < obj.floor) ||
-                                               (!d->finiT && obj.status_ > 0 ? d->target <= obj.maxF : d->target >= obj.minF && obj.status_ > 0 ? d->target > obj.floor
-                                                                                                                                                : d->target < obj.floor)))
-                {
-                    cout << "RESET ASSIGNMENT: ARCHOR THE REQUEST " << d->request << " @" << &d->request << "\n";
-                    cout << "RESET ASSIGNMENT: ARCHOR THE TARGET " << reqPool[obj.floor + obj.status_][0]->target << " @" << &d->target << "\n";
-                    Elist[index].add_target(d->request, d->target);
-                    t = d;
-                    d = nullReq;
-                    whole--;
-                }
-                if (whole <= 0)
-                    break;
-            }
-            if (reqPool[obj.floor + obj.status_][0] != NULL)
-            {
-                cout << "RESET ASSIGNMENT: ARCHOR THE REQUEST " << reqPool[obj.floor + obj.status_][0]->request << " @" << &reqPool[obj.floor + obj.status_][0]->request << "\n";
-                cout << "RESET ASSIGNMENT: ARCHOR THE TARGET " << reqPool[obj.floor + obj.status_][0]->target << " @" << &reqPool[obj.floor + obj.status_][0]->target << "\n";
-                if (cnt)
-                {
-                    Elist[index].add_target(reqPool[obj.floor + obj.status_][0]->request, reqPool[obj.floor + obj.status_][0]->target);
-                    reqPool[obj.floor + obj.status_][0] = nullReq;
-                    whole--;
-                }
-                else
-                {
-                    Elist[index].del_target(reqPool[obj.floor + obj.status_][0]->request, reqPool[obj.floor + obj.status_][0]->target);
-                    add_target(t->request, t->target);
-                }
-            }
-            index++;
-            if (index == MAXELEVATORNUM)
-                index = 0;
-            if (whole <= 0)
-                break;
-        }
-    }
-}
 
 inline void init_module(const char *configPath)
 {
@@ -122,6 +60,8 @@ inline void init_module(const char *configPath)
     for (int i = 1; i <= MAXFLOORNUM; i++)
         for (int j = 0; j < maxService; j++)
             reqPool[i][j] = nullReq;
+    for (int i = 0; i < MAXELEVATORNUM; i++)
+        Elist[i].ElevatorInit(i);
 }
 
 inline int get_configData(ifstream *file, const char *key)
@@ -140,16 +80,16 @@ inline void add_target(int request, int target)
     t.isUp = target > request;
     register_target(&t, request);
     register_target(&t, target);
-    whole++;
-    vector<dataSwaper> temp;
-    for (Elevator i : Elist)
+    int minId = 0;
+    for (int i = 0; i < MAXELEVATORNUM; i++)
     {
-        dataSwaper c = i.GetData();
-        cout << "LINK[ELEVATOR (" << &i << ") SWAP DATA @" << &c << "] {maxF:" << c.maxF << ", minF:" << c.minF << ", floor:" << c.floor << ", status:" << c.status_ << "}\n";
-        temp.push_back(c);
-        // cout << "Herobrine6265's DebugInfo at Line 143:" << reqPool[c.floor+c.status_]->request << endl;
+        if (Elist[minId].DistanceTime(request, target - request > 0) > Elist[i].DistanceTime(request, target - request > 0))
+            minId = i;
+        if (Elist[minId].DistanceTime(request, target - request > 0) == Elist[i].DistanceTime(request, target - request > 0))
+            if (Elist[minId].GetTargetSize() > Elist[i].GetTargetSize())
+                minId = i;
     }
-    reset_assignment(&temp);
+    Elist[minId].add_target(request, target);
 }
 
 inline void register_target(requestData *d, int floor)

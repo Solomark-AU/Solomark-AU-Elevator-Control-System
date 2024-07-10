@@ -10,9 +10,9 @@ int main()
     {
         int req, tar;
         cin >> req >> tar;
-        cout<<"Fuck zy\n";
+        cout<<"F**k zy\n";
         add_target(req, tar);
-        cout<<"Fuck RBQ\n";
+        cout<<"F**k RBQ\n";
     }
     return 0;
 }

@@ -2,6 +2,7 @@
 #define SOLOMARK_AU_ELEVATORDISPATCH
 #include <ctime>
 #include <vector>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 #include "jsoncpp/json/json.h"
@@ -11,8 +12,9 @@ using namespace Json;
 const int MAXFLOORNUM = 10, MAXELEVATORNUM = 15;
 int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed;
 
-int requestedNum[MAXFLOORNUM + 5][7][25][65]; // Count by minute and allows a inaccuracy of ±5 mins;
-int station[25][65][MAXELEVATORNUM + 5][7];   //
+bool visID[MAXELEVATORNUM + 5];
+int requestedNum[7][25][65][MAXFLOORNUM + 5]; // Count by minute and allows a inaccuracy of ±5 mins;
+int station[7][25][65][MAXELEVATORNUM + 5];   //
 int LastUpDate = -1;
 
 enum STATUS
@@ -49,16 +51,23 @@ bool cmp_bigger(StationInfo a, StationInfo b)
     return a.ReqNum > b.ReqNum;
 }
 
+string ntos(int n)
+{
+    string s = "";
+    if (n == 0)
+        return "0";
+    while (n)
+    {
+        s = char(n % 10) + s;
+        n /= 10;
+    }
+    return s;
+}
+
 class Elevator
 {
 public:
-    Elevator()
-    {
-        ELEVATORNUM++;
-        this->ID = ELEVATORNUM;
-    }
-
-    Elevator(int id) { this->ID = id; }
+    Elevator() {}
 
     ~Elevator() {}
 
@@ -70,63 +79,121 @@ public:
         tm *time_info = localtime(&t);
         if (time_info->tm_wday != LastUpDate)
         {
-            for (int i = 0; i < 25; i++)
-                for (int j = 0; j < 61; j++)
+            for (int i = 0; i < 24; i++)
+            {
+                for (int j = 0; j < 60; j++)
                 {
-                    vector<StationInfo> reqNum;
-                    for (int k = 1; k < MAXFLOORNUM; k++)
+                    vector<StationInfo> StInfo;
+                    bool vis[FLOOR + 5];
+                    int minvis = 1;
+                    for (int f = 1; f <= FLOOR; f++)
                     {
-                        reqNum.push_back(StationInfo{requestedNum[k][time_info->tm_wday][i][j], k});
-                        requestedNum[k][time_info->tm_wday][i][j] = 0;
+                        vis[f] = false;
+                        StInfo.push_back(StationInfo{requestedNum[time_info->tm_wday][i][j][f], f});
+                        requestedNum[time_info->tm_wday][i][j][f] = 0;
                     }
-                    sort(reqNum.begin(), reqNum.end(), cmp_bigger);
-                    for (int k = 1; k <= ELEVATORNUM && k <= 10; k++)
+                    sort(StInfo.begin(), StInfo.end(), cmp_bigger);
+                    for (int e = 0; e < ELEVATORNUM; e++)
                     {
-                        requestedNum[station[i][j][k][time_info->tm_wday]][time_info->tm_wday][i][j] += 11 - k;
-                        station[i][j][k][time_info->tm_wday] = reqNum[k - 1].StationFloor;
+                        if (StInfo[e].ReqNum)
+                        {
+                            vis[StInfo[e].StationFloor] = true;
+                            station[time_info->tm_wday][i][j][e] = StInfo[e].StationFloor;
+                        }
+                        else
+                        {
+                            if (!vis[FLOOR / 2])
+                            {
+                                vis[FLOOR / 2] = 1;
+                                station[time_info->tm_wday][i][j][e] = FLOOR / 2;
+                            }
+                            else if (!vis[1])
+                            {
+                                vis[1] = 1;
+                                station[time_info->tm_wday][i][j][e] = 1;
+                            }
+                            else if (!vis[FLOOR])
+                            {
+                                vis[FLOOR] = 1;
+                                station[time_info->tm_wday][i][j][e] = FLOOR;
+                            }
+                            else
+                            {
+                                while (1)
+                                {
+                                    if (!vis[minvis])
+                                        station[time_info->tm_wday][i][j][e] = minvis;
+                                    minvis++;
+                                }
+                            }
+                        }
+                        requestedNum[time_info->tm_wday][i][j][station[time_info->tm_wday][i][j][e]] += 2 * ELEVATORNUM - e;
                     }
-                    requestedNum[FLOOR / 2][time_info->tm_wday][i][j] += 3;
+                    requestedNum[time_info->tm_wday][i][j][FLOOR / 2] += 5;
                 }
+            }
             LastUpDate = time_info->tm_wday;
         }
-        t -= 300;
         for (int i = -5; i <= 5; i++)
         {
-            tm *temp = localtime(&t);
-            requestedNum[req][temp->tm_wday][temp->tm_hour][temp->tm_min]++;
-            vector<StationInfo> reqNum;
-            for (int k = 1; k < MAXFLOORNUM; k++)
-                reqNum.push_back(StationInfo{requestedNum[k][temp->tm_wday][temp->tm_hour][temp->tm_min], k});
-            sort(reqNum.begin(), reqNum.end(), cmp_bigger);
-            for (int k = 1; k <= ELEVATORNUM && k <= 10; k++)
-                station[temp->tm_hour][temp->tm_min][k][time_info->tm_wday] = reqNum[k - 1].StationFloor;
-            t += 60;
-        }
-        // push into vector
-        this->target.push_back(REQUEST{req, tar, -1});
-        if ((req - this->floor) * this->status > 0)
-        {
-            this->highest = max(highest, req);
-            this->floor = max(highest, req);
+            t += i * 60;
+            time_info = localtime(&t);
+            requestedNum[time_info->tm_wday][time_info->tm_hour][time_info->tm_min][req]++;
+            t -= i * 60;
         }
         if (this->isAvailable)
         {
             this->highest = req;
             this->lowest = req;
-            if (this->floor - req > 0)
+            if (this->floor - req < 0)
                 this->status = STATUS::UPSIDE;
             else if (this->floor - req > 0)
                 this->status = STATUS::DOWNSIDE;
             else
-                this->status = STATUS::STATIC;
+            {
+                if (this->high % HighOfFloor <= HighOfFloor / 2000)
+                {
+                    if (tar - req > 0)
+                        this->status = STATUS::UPSIDE;
+                    else if (tar - req < 0)
+                        this->status = STATUS::DOWNSIDE;
+                }
+                else if (this->high < (req - 1) * HighOfFloor)
+                    this->status = STATUS::UPSIDE;
+                else
+                    this->status = STATUS::DOWNSIDE;
+            }
         }
-
+        if (req == this->floor && this->high % HighOfFloor <= HighOfFloor / 2000)
+        {
+            this->target.push_back(REQUEST{req, tar, 1});
+            this->open_door();
+            if ((tar - this->floor) * this->status > 0)
+            {
+                this->highest = max(highest, tar);
+                this->lowest = min(lowest, tar);
+            }
+        }
+        else
+        {
+            this->target.push_back(REQUEST{req, tar, -1});
+            if ((req - this->floor) * this->status > 0)
+            {
+                this->highest = max(highest, req);
+                this->lowest = min(lowest, req);
+            }
+            if ((tar - this->floor) * this->status > 0 && (tar - req) * this->status > 0)
+            {
+                this->highest = max(highest, tar);
+                this->lowest = min(lowest, tar);
+            }
+        }
         this->isAvailable = false;
     }
 
-    void del_target(int req, int tar)
+    void del_target(int req, int tar, int status = -1)
     {
-        REQUEST temp = REQUEST{req, tar, -1};
+        REQUEST temp = REQUEST{req, tar, status};
         bool NotFound = 1;
         for (int k = 0; k < this->target.size(); k++)
         {
@@ -163,7 +230,10 @@ public:
         for (REQUEST i : this->target)
         {
             if (i.status == 0)
-                continue;
+            {
+                this->highest = this->lowest = i.req;
+                break;
+            }
             if ((i.status == -1 && (i.req - this->floor) * this->status > 0))
             {
                 this->highest = max(this->highest, i.req);
@@ -177,6 +247,8 @@ public:
         }
     }
 
+    void del_target(REQUEST temp_req) { this->del_target(temp_req.req, temp_req.tar, temp_req.status); }
+
     void move()
     {
         bool Not_Opened = true;
@@ -187,7 +259,7 @@ public:
             REQUEST i = this->target[k];
             if (i.status == 1 && this->floor == i.tar)
             {
-                this->target.erase(this->target.begin() + k);
+                this->del_target(i);
                 k--;
                 if (Not_Opened)
                 {
@@ -195,7 +267,7 @@ public:
                     Not_Opened = false;
                 }
             }
-            if (i.req == this->floor)
+            if (i.status == -1 && this->floor == i.req)
             {
                 i.status = 1;
                 if (Not_Opened)
@@ -226,7 +298,7 @@ public:
                 time_t t;
                 time(&t);
                 tm *temp = localtime(&t);
-                int k = station[temp->tm_hour][temp->tm_min][this->ID][temp->tm_wday];
+                int k = station[temp->tm_wday][temp->tm_hour][temp->tm_min][this->ID];
                 if (this->floor != k)
                 {
                     this->target.push_back(REQUEST{k, k, 0});
@@ -315,6 +387,8 @@ public:
         return count;
     }
 
+    inline int GetTargetSize() { return this->target.size(); }
+
     inline int GetWayTargetNumber(STATUS way) // way:1->UPSIDE     -1->DOWNSIDE
     {
         if (way == STATUS::UPSIDE)
@@ -324,11 +398,34 @@ public:
         return -1;
     }
 
+    inline void ElevatorInit(int id)
+    {
+        if (visID[id])
+            throw "F**k U Link!You have used this ID!";
+        this->ID = id;
+        for (int k = 0; k <= 7; k++)
+            for (int i = 0; i < 24; i++)
+                for (int j = 0; j < 60; j++)
+                    station[k][i][j][this->ID] = (FLOOR / ELEVATORNUM - 1) * id + 1;
+        if (LastUpDate == -1)
+        {
+            time_t t;
+            time(&t);
+            LastUpDate = localtime(&t)->tm_wday;
+        }
+        this->inited = true;
+    }
+
+    inline int DistanceTime(int Floor, int way) // way:1->UPSIDE     -1->DOWNSIDE
+    {
+        return abs(Floor - this->floor) * HighOfFloor / Speed;
+    }
+
 private:
-    int floor = 1, high = 0, ID; // station 常驻楼层
+    int floor = 1, high = 0, ID; // ID:start from 0
     int highest, lowest;
     vector<REQUEST> target;
     STATUS status = STATUS::STATIC;
-    bool isAvailable = true;
+    bool isAvailable = true, inited = false;
 };
 #endif
