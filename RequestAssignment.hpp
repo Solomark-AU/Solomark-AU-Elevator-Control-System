@@ -14,7 +14,6 @@ Value root;
 Reader reader;
 long long n = -999999999, whole = 0;
 const int maxService = 5;
-int floorNumber, elevatorNumber, highOfFloor, elevatorSpeed;
 
 Elevator Elist[MAXELEVATORNUM];
 
@@ -52,10 +51,11 @@ inline void init_module(const char *configPath)
         throw "FileNotOpenedError: The target file is not opened.";
     if (!reader.parse(config, root, false))
         throw "FileDecodeFailureError: Decode the config file unsuccessfully.";
-    FLOOR = floorNumber = get_configData(&config, "floorNumber");
-    HighOfFloor = highOfFloor = get_configData(&config, "highOfFloor");
-    Speed = elevatorSpeed = get_configData(&config, "elevatorSpeed");
-    ELEVATORNUM = elevatorNumber = get_configData(&config, "elevatorNumber");
+    FLOOR = get_configData(&config, "floorNumber");
+    HighOfFloor = get_configData(&config, "highOfFloor");
+    Speed = get_configData(&config, "elevatorSpeed");
+    ELEVATORNUM = get_configData(&config, "elevatorNumber");
+    OpendoorTime = get_configData(&config, "opendoorTime");
     nullReq = &qwertyuiop;
     for (int i = 1; i <= MAXFLOORNUM; i++)
         for (int j = 0; j < maxService; j++)
@@ -80,16 +80,29 @@ inline void add_target(int request, int target)
     t.isUp = target > request;
     register_target(&t, request);
     register_target(&t, target);
-    int minId = 0;
-    for (int i = 0; i < MAXELEVATORNUM; i++)
+    ResTime minResTime = Elist[0].RespondTime(request, target);
+    for (int i = 1; i < ELEVATORNUM; i++)
     {
+        /*
         if (Elist[minId].DistanceTime(request, target - request > 0) > Elist[i].DistanceTime(request, target - request > 0))
             minId = i;
         if (Elist[minId].DistanceTime(request, target - request > 0) == Elist[i].DistanceTime(request, target - request > 0))
             if (Elist[minId].GetTargetSize() > Elist[i].GetTargetSize())
                 minId = i;
+        */
+        ResTime temp = Elist[i].RespondTime(request, target);
+        if (minResTime.TarTime > temp.TarTime)
+            minResTime = temp;
+        else if (minResTime.TarTime == temp.TarTime)
+        {
+            if (minResTime.ReqTime1 > temp.ReqTime1)
+                minResTime = temp;
+            else if (minResTime.ReqTime1 == temp.ReqTime1)
+                if (Elist[minResTime.ElevatorID].GetTargetSize() > Elist[i].GetTargetSize())
+                    minResTime = temp;
+        }
     }
-    Elist[minId].add_target(request, target);
+    Elist[minResTime.ElevatorID].add_target(request, target);
 }
 
 inline void register_target(requestData *d, int floor)

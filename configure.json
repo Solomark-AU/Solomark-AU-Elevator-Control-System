@@ -2,5 +2,6 @@
     "floorNumber": 15,
     "elevatorNumber": 5,
     "highOfFloor": 50,
-    "elevatorSpeed": 1
+    "elevatorSpeed": 1,
+    "opendoorTime":15
 }

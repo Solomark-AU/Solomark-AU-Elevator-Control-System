@@ -10,7 +10,7 @@ using namespace std;
 using namespace Json;
 
 const int MAXFLOORNUM = 10, MAXELEVATORNUM = 15;
-int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed;
+int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed, OpendoorTime;
 
 bool visID[MAXELEVATORNUM + 5];
 int requestedNum[7][25][65][MAXFLOORNUM + 5]; // Count by minute and allows a inaccuracy of ±5 mins;
@@ -39,6 +39,17 @@ struct dataSwaper
     int maxF, minF, floor;
     STATUS status_;
     vector<REQUEST> *targets;
+};
+
+struct ResTime
+{
+    // bool status; // True:ResTime1!=ResTime2     False:ResTime1==ResTime2
+    int ReqTime1, /*ReqTime2,*/ TarTime, ElevatorID;
+    bool operator<(ResTime b)
+    {
+        ResTime a = *this;
+        
+    }
 };
 
 struct StationInfo
@@ -70,6 +81,28 @@ public:
     Elevator() {}
 
     ~Elevator() {}
+
+    inline void ElevatorInit(int id)
+    {
+        if (visID[id])
+            throw "F**k U Link!You have used this ID!";
+        this->ID = id;
+        for (int k = 0; k <= 7; k++)
+            for (int i = 0; i < 24; i++)
+                for (int j = 0; j < 60; j++)
+                    station[k][i][j][this->ID] = (FLOOR / ELEVATORNUM - 1) * id + 1;
+        if (LastUpDate == -1)
+        {
+            time_t t;
+            time(&t);
+            LastUpDate = localtime(&t)->tm_wday;
+        }
+        this->inited = true;
+    }
+
+    inline bool arrive(int Floor) { return Floor == this->floor && this->high % HighOfFloor <= HighOfFloor / 2000; }
+
+    inline bool arrive(int Floor, int High) { return Floor == High % HighOfFloor + 1 && High % HighOfFloor <= HighOfFloor / 2000; }
 
     void add_target(int req, int tar)
     {
@@ -164,7 +197,7 @@ public:
                     this->status = STATUS::DOWNSIDE;
             }
         }
-        if (req == this->floor && this->high % HighOfFloor <= HighOfFloor / 2000)
+        if (this->arrive(req))
         {
             this->target.push_back(REQUEST{req, tar, 1});
             this->open_door();
@@ -213,7 +246,7 @@ public:
             time(&t);
             tm *temp = localtime(&t);
             int k = station[temp->tm_hour][temp->tm_min][this->ID][temp->tm_wday];
-            if (this->floor != k)
+            if (!arrive(k))
             {
                 this->target.push_back(REQUEST{k, k, 0});
                 if (k < this->floor)
@@ -257,7 +290,7 @@ public:
         for (int k = 0; k < this->target.size(); k++)
         {
             REQUEST i = this->target[k];
-            if (i.status == 1 && this->floor == i.tar)
+            if (i.status == 1 && this->arrive(i.tar))
             {
                 this->del_target(i);
                 k--;
@@ -267,9 +300,9 @@ public:
                     Not_Opened = false;
                 }
             }
-            if (i.status == -1 && this->floor == i.req)
+            if (i.status == -1 && this->arrive(i.req))
             {
-                i.status = 1;
+                this->target[k].status = 1;
                 if (Not_Opened)
                 {
                     this->open_door();
@@ -278,8 +311,8 @@ public:
             }
         }
         // Change the Way
-        if ((this->floor == this->lowest && this->status == STATUS::DOWNSIDE) ||
-            (this->floor == this->highest && this->status == STATUS::UPSIDE))
+        if ((this->arrive(this->lowest) && this->status == STATUS::DOWNSIDE) ||
+            (this->arrive(this->highest) && this->status == STATUS::UPSIDE))
         {
             this->highest = 0;
             this->lowest = MAXFLOORNUM;
@@ -299,7 +332,7 @@ public:
                 time(&t);
                 tm *temp = localtime(&t);
                 int k = station[temp->tm_wday][temp->tm_hour][temp->tm_min][this->ID];
-                if (this->floor != k)
+                if (!this->arrive(k))
                 {
                     this->target.push_back(REQUEST{k, k, 0});
                     if (k < this->floor)
@@ -313,7 +346,13 @@ public:
         }
     }
 
-    void open_door() {}
+    void open_door()
+    {
+        time_t t1, t2;
+        time(&t1);
+        while (t2 - t1 < OpendoorTime)
+            time(&t2);
+    }
 
     inline dataSwaper GetData()
     {
@@ -387,8 +426,6 @@ public:
         return count;
     }
 
-    inline int GetTargetSize() { return this->target.size(); }
-
     inline int GetWayTargetNumber(STATUS way) // way:1->UPSIDE     -1->DOWNSIDE
     {
         if (way == STATUS::UPSIDE)
@@ -398,27 +435,77 @@ public:
         return -1;
     }
 
-    inline void ElevatorInit(int id)
-    {
-        if (visID[id])
-            throw "F**k U Link!You have used this ID!";
-        this->ID = id;
-        for (int k = 0; k <= 7; k++)
-            for (int i = 0; i < 24; i++)
-                for (int j = 0; j < 60; j++)
-                    station[k][i][j][this->ID] = (FLOOR / ELEVATORNUM - 1) * id + 1;
-        if (LastUpDate == -1)
-        {
-            time_t t;
-            time(&t);
-            LastUpDate = localtime(&t)->tm_wday;
-        }
-        this->inited = true;
-    }
+    inline int GetTargetSize() { return this->target.size(); }
 
-    inline int DistanceTime(int Floor, int way) // way:1->UPSIDE     -1->DOWNSIDE
+    inline ResTime RespondTime(int ReqFloor, int TarFloor)
     {
-        return abs(Floor - this->floor) * HighOfFloor / Speed;
+        ResTime TimeTemp;
+        TimeTemp.ElevatorID = this->ID;
+        vector<REQUEST> TargetTemp(this->target);
+        int HighTemp = this->high, HighestTemp = this->highest, LowestTemp = this->lowest, NotVisReq = 1;
+        ;
+        STATUS StatusTemp = this->status;
+        bool vis[TargetTemp.size() + 5];
+        for (int i = 0; i < TargetTemp.size() + 5; i++)
+            vis[i] = false;
+        while (1)
+        {
+            TimeTemp.ReqTime1 += NotVisReq;
+            TimeTemp.TarTime++;
+            HighTemp += StatusTemp * Speed;
+            if (this->arrive(ReqFloor, HighTemp) && NotVisReq)
+            {
+                NotVisReq = 0;
+                TimeTemp.TarTime += OpendoorTime;
+            }
+            if (this->arrive(TarFloor, HighTemp) && !NotVisReq)
+                break;
+            for (int k = 0; k < TargetTemp.size(); k++)
+            {
+                if (vis[k])
+                    continue;
+                REQUEST i = TargetTemp[k];
+                if (i.status == 1 && this->arrive(i.tar, HighTemp))
+                {
+                    vis[k] = true;
+                    TimeTemp.ReqTime1 += NotVisReq * OpendoorTime;
+                    TimeTemp.TarTime += OpendoorTime;
+                }
+                if (i.status == -1 && this->arrive(i.req, HighTemp))
+                {
+                    TargetTemp[k].status = 1;
+                    TimeTemp.ReqTime1 += NotVisReq * OpendoorTime;
+                    TimeTemp.TarTime += OpendoorTime;
+                }
+            }
+            // Change the Way
+            if ((this->arrive(LowestTemp, HighTemp) && StatusTemp == STATUS::DOWNSIDE) ||
+                (this->arrive(HighestTemp, HighTemp) && StatusTemp == STATUS::UPSIDE))
+            {
+                HighestTemp = 0;
+                LowestTemp = MAXFLOORNUM;
+                for (REQUEST i : TargetTemp)
+                {
+                    HighestTemp = max(HighestTemp, max(i.req, i.tar));
+                    LowestTemp = min(LowestTemp, min(i.req, i.tar));
+                }
+                if (StatusTemp == STATUS::UPSIDE)
+                    StatusTemp == STATUS::DOWNSIDE;
+                else if (StatusTemp == STATUS::DOWNSIDE)
+                    StatusTemp == STATUS::UPSIDE;
+                if (TargetTemp.empty())
+                {
+                    if (NotVisReq)
+                    {
+                        TimeTemp.ReqTime1 += abs(HighTemp - (ReqFloor - 1) * HighOfFloor) / Speed;
+                        HighTemp = (ReqFloor - 1) * HighOfFloor;
+                    }
+                    TimeTemp.TarTime += abs(HighTemp - (TarFloor - 1) * HighOfFloor) / Speed;
+                    break;
+                }
+            }
+        }
+        return TimeTemp;
     }
 
 private:
