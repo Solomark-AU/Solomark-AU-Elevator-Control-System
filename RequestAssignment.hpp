@@ -13,7 +13,7 @@ ifstream config;
 Value root;
 Reader reader;
 long long n = -999999999, whole = 0;
-const int maxService = 5;
+const int maxService = 50;
 
 Elevator Elist[MAXELEVATORNUM];
 

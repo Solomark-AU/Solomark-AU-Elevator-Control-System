@@ -9,7 +9,7 @@
 using namespace std;
 using namespace Json;
 
-const int MAXFLOORNUM = 10, MAXELEVATORNUM = 15;
+const int MAXFLOORNUM = 100, MAXELEVATORNUM = 10;
 int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed, OpendoorTime;
 
 bool visID[MAXELEVATORNUM + 5];
