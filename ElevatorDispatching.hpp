@@ -506,6 +506,8 @@ public:
         return TimeTemp;
     }
 
+    inline ResTime RespondTime(REQUEST req) { return this->RespondTime(req.req, req.tar); }
+
 private:
     int floor = 1, high = 0, ID; // ID:start from 0
     int highest, lowest;
