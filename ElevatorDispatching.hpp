@@ -13,8 +13,8 @@ const int MAXFLOORNUM = 10, MAXELEVATORNUM = 15;
 int FLOOR, ELEVATORNUM = 0, HighOfFloor, Speed, OpendoorTime;
 
 bool visID[MAXELEVATORNUM + 5];
-int requestedNum[7][25][65][MAXFLOORNUM + 5]; // Count by minute and allows a inaccuracy of ±5 mins;
-int station[7][25][65][MAXELEVATORNUM + 5];   //
+int requestedNum[8][25][65][MAXFLOORNUM + 5]; // Count by minute and allows a inaccuracy of ±5 mins;
+int station[8][25][65][MAXELEVATORNUM + 5];   //
 int LastUpDate = -1;
 
 enum STATUS
@@ -45,11 +45,6 @@ struct ResTime
 {
     // bool status; // True:ResTime1!=ResTime2     False:ResTime1==ResTime2
     int ReqTime1, /*ReqTime2,*/ TarTime, ElevatorID;
-    bool operator<(ResTime b)
-    {
-        ResTime a = *this;
-        
-    }
 };
 
 struct StationInfo
@@ -102,7 +97,7 @@ public:
 
     inline bool arrive(int Floor) { return Floor == this->floor && this->high % HighOfFloor <= HighOfFloor / 2000; }
 
-    inline bool arrive(int Floor, int High) { return Floor == High % HighOfFloor + 1 && High % HighOfFloor <= HighOfFloor / 2000; }
+    inline bool arrive(int Floor, int High) { return Floor == (High / HighOfFloor + 1) && (High % HighOfFloor) * 2000 <= HighOfFloor; }
 
     void add_target(int req, int tar)
     {
@@ -441,15 +436,18 @@ public:
     {
         ResTime TimeTemp;
         TimeTemp.ElevatorID = this->ID;
+        if (this->isAvailable)
+        {
+            TimeTemp.ReqTime1 = abs(this->high - (ReqFloor - 1) * HighOfFloor) / Speed;
+            TimeTemp.TarTime = TimeTemp.ReqTime1 + OpendoorTime + abs(ReqFloor - TarFloor) * HighOfFloor / Speed;
+            return TimeTemp;
+        }
         vector<REQUEST> TargetTemp(this->target);
         int HighTemp = this->high, HighestTemp = this->highest, LowestTemp = this->lowest, NotVisReq = 1;
-        ;
         STATUS StatusTemp = this->status;
-        bool vis[TargetTemp.size() + 5];
-        for (int i = 0; i < TargetTemp.size() + 5; i++)
-            vis[i] = false;
-        while (1)
+        while (HighTemp < 500)
         {
+            // cout << "Elevator[" << this->ID << "]::RespondTime -> HighTemp, StatusTemp: " << HighTemp << " " << StatusTemp << "\n";
             TimeTemp.ReqTime1 += NotVisReq;
             TimeTemp.TarTime++;
             HighTemp += StatusTemp * Speed;
@@ -462,12 +460,11 @@ public:
                 break;
             for (int k = 0; k < TargetTemp.size(); k++)
             {
-                if (vis[k])
-                    continue;
                 REQUEST i = TargetTemp[k];
                 if (i.status == 1 && this->arrive(i.tar, HighTemp))
                 {
-                    vis[k] = true;
+                    TargetTemp.erase(TargetTemp.begin() + k);
+                    k--;
                     TimeTemp.ReqTime1 += NotVisReq * OpendoorTime;
                     TimeTemp.TarTime += OpendoorTime;
                 }
@@ -495,6 +492,7 @@ public:
                     StatusTemp == STATUS::UPSIDE;
                 if (TargetTemp.empty())
                 {
+                    cout << "TargetTemp.empty()";
                     if (NotVisReq)
                     {
                         TimeTemp.ReqTime1 += abs(HighTemp - (ReqFloor - 1) * HighOfFloor) / Speed;
