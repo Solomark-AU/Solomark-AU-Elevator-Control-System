@@ -27,7 +27,7 @@ struct requestData
     bool isUp = true;
 };
 
-requestData *reqPool[MAXFLOORNUM + 1][maxService];
+requestData *reqPool[MAXFLOORNUM + 5][maxService + 5];
 
 requestData qwertyuiop;
 requestData *nullReq;
@@ -57,8 +57,9 @@ inline void init_module(const char *configPath)
     ELEVATORNUM = get_configData(&config, "elevatorNumber");
     OpendoorTime = get_configData(&config, "opendoorTime");
     nullReq = &qwertyuiop;
+    cout<<"Read Finish\n";
     for (int i = 1; i <= MAXFLOORNUM; i++)
-        for (int j = 0; j < maxService; j++)
+        for (int j = 0; j < maxService; j++) 
             reqPool[i][j] = nullReq;
     for (int i = 0; i < ELEVATORNUM; i++)
         Elist[i].ElevatorInit(i);
